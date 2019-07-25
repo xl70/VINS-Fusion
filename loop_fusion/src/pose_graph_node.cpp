@@ -362,6 +362,14 @@ void process()
 
                 KeyFrame* keyframe = new KeyFrame(pose_msg->header.stamp.toSec(), frame_index, T, R, image,
                                    point_3d, point_2d_uv, point_2d_normal, point_id, sequence);   
+                cout << keyframe->point_3d.size() << "," 
+                    << keyframe->point_2d_uv.size() << "," 
+                    << keyframe->point_2d_norm.size() << ","
+                    << keyframe->window_keypoints.size() << ","
+                    << keyframe->window_brief_descriptors.size() << ","
+                    << keyframe->keypoints.size() << ","
+                    << keyframe->keypoints_norm.size() << ","
+                    << keyframe->brief_descriptors.size() << endl;
                 m_process.lock();
                 start_flag = 1;
                 posegraph.addKeyFrame(keyframe, 1);

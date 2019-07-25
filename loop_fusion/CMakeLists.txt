@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(loop_fusion)
+project(wl_loop_fusion)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++11")
@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
     nav_msgs
-    camera_models
+    wl_camera_models
     cv_bridge
     roslib
     )

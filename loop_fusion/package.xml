@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>loop_fusion</name>
+  <name>wl_loop_fusion</name>
   <version>0.0.0</version>
   <description>loop_fusion package</description>
 
@@ -40,8 +40,8 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>camera_models</build_depend>
-  <run_depend>camera_models</run_depend>
+  <build_depend>wl_camera_models</build_depend>
+  <run_depend>wl_camera_models</run_depend>
 
 
 

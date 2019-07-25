@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>vins</name>
+  <name>wl_vins</name>
   <version>0.0.0</version>
   <description>The vins package</description>
 
@@ -42,11 +42,11 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>image_transport</build_depend>
-  <build_depend>camera_models</build_depend>
+  <build_depend>wl_camera_models</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>image_transport</run_depend>
-  <run_depend>camera_models</run_depend>
+  <run_depend>wl_camera_models</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

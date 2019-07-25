@@ -54,7 +54,9 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 // load previous keyframe
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, Vector3d &_T_w_i, Matrix3d &_R_w_i,
 					cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1 > &_loop_info,
-					vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors)
+					vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors,
+                                        vector<cv::Point3f> &_point_3d, vector<cv::Point2f> &_point_2d_uv, vector<cv::Point2f> &_point_2d_norm, 
+                                        vector<BRIEF::bitset> &_window_brief_descriptors)
 {
 	time_stamp = _time_stamp;
 	index = _index;
@@ -80,6 +82,16 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 	keypoints = _keypoints;
 	keypoints_norm = _keypoints_norm;
 	brief_descriptors = _brief_descriptors;
+        point_3d = _point_3d;
+        point_2d_uv = _point_2d_uv;
+        point_2d_norm = _point_2d_norm;
+        window_brief_descriptors = _window_brief_descriptors;
+        for(int i = 0; i < (int)point_2d_uv.size(); i++)
+        {
+            cv::KeyPoint key;
+            key.pt = point_2d_uv[i];
+            window_keypoints.push_back(key);
+        }
 }
 
 
