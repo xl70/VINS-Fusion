@@ -45,6 +45,8 @@ queue<sensor_msgs::ImageConstPtr> image_buf;
 queue<sensor_msgs::PointCloudConstPtr> point_buf;
 queue<nav_msgs::Odometry::ConstPtr> pose_buf;
 std::mutex m_buf;
+std::mutex m_process;
+std::mutex m_init;
 
 BriefDatabase db;
 BriefVocabulary* voc=NULL;
@@ -55,13 +57,13 @@ Eigen::Vector3d last_t(-100, -100, -100);
 Vector3d t_drift;
 Matrix3d r_drift;
 bool init = false;
-ros::Publisher pub_keyframe_pose;
+ros::Publisher pub_odometry_map;
 
 
 
 void image_callback(const sensor_msgs::ImageConstPtr &image_msg)
 {
-    if (init) return;
+    //if (init) return;
     //ROS_INFO("image_callback!");
     m_buf.lock();
     image_buf.push(image_msg);
@@ -78,8 +80,10 @@ void pose_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
         // body frame
         Vector3d correct_t;
         Quaterniond correct_q;
+        m_init.lock();
         correct_t = t_drift;
         correct_q = r_drift;
+        m_init.unlock();
 
         transform.setOrigin(tf::Vector3(correct_t(0),
                                         correct_t(1),
@@ -91,31 +95,61 @@ void pose_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
         transform.setRotation(q);
         br.sendTransform(tf::StampedTransform(transform, pose_msg->header.stamp, "map", "world"));
     }
-    else
-    {
-        //ROS_INFO("pose_callback!");
-        m_buf.lock();
-        pose_buf.push(pose_msg);
-        m_buf.unlock();
-    }
 
-    
-    /*
-    if (init) return;
     //ROS_INFO("pose_callback!");
     m_buf.lock();
     pose_buf.push(pose_msg);
     m_buf.unlock();
-    */
 }
 
 void point_callback(const sensor_msgs::PointCloudConstPtr &point_msg)
 {
-    if (init) return;
+    //if (init) return;
     //ROS_INFO("point_callback!");
     m_buf.lock();
     point_buf.push(point_msg);
     m_buf.unlock();
+}
+
+void extrinsic_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
+{
+    m_process.lock();
+    tic = Vector3d(pose_msg->pose.pose.position.x,
+                   pose_msg->pose.pose.position.y,
+                   pose_msg->pose.pose.position.z);
+    qic = Quaterniond(pose_msg->pose.pose.orientation.w,
+                      pose_msg->pose.pose.orientation.x,
+                      pose_msg->pose.pose.orientation.y,
+                      pose_msg->pose.pose.orientation.z).toRotationMatrix();
+    m_process.unlock();
+}
+
+void odometry_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
+{
+    if (!init)
+        return;
+    //ROS_INFO("odometry_callback!");
+    Vector3d vio_t(pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y, pose_msg->pose.pose.position.z);
+    Quaterniond vio_q;
+    vio_q.w() = pose_msg->pose.pose.orientation.w;
+    vio_q.x() = pose_msg->pose.pose.orientation.x;
+    vio_q.y() = pose_msg->pose.pose.orientation.y;
+    vio_q.z() = pose_msg->pose.pose.orientation.z;
+
+    vio_t = r_drift * vio_t + t_drift;
+    vio_q = r_drift * vio_q;
+
+    nav_msgs::Odometry odometry;
+    odometry.header = pose_msg->header;
+    odometry.header.frame_id = "map";
+    odometry.pose.pose.position.x = vio_t.x();
+    odometry.pose.pose.position.y = vio_t.y();
+    odometry.pose.pose.position.z = vio_t.z();
+    odometry.pose.pose.orientation.x = vio_q.x();
+    odometry.pose.pose.orientation.y = vio_q.y();
+    odometry.pose.pose.orientation.z = vio_q.z();
+    odometry.pose.pose.orientation.w = vio_q.w();
+    pub_odometry_map.publish(odometry);
 }
 
 void loadPoseGraph()
@@ -285,9 +319,49 @@ KeyFrame* getKeyFrame(int index)
         return NULL;
 }
 
+bool p_r_RANSAC(vector<Vector3d> &_i_p, vector<Matrix3d> &_i_r, Vector3d &_init_p, Matrix3d &_init_r)
+{
+    vector<int> max_inliers;
+    for (int i = 0; i < _i_p.size(); i++)
+    {
+        vector<int> inliers;
+        for (int j = 0; j < _i_p.size(); j++)
+        {
+            double dis = (_i_p[i] - _i_p[j]).norm();
+            if (dis < 0.5)
+            {
+                inliers.push_back(j);
+            }
+        }
+        
+        if (inliers.size() > max_inliers.size())
+        {
+            max_inliers = inliers;
+        }
+    }
+
+    if (max_inliers.size() < 3)
+        return false;
+    
+    _init_p.x() = 0;
+    _init_p.y() = 0;
+    _init_p.z() = 0;
+    Vector3d ypr{0, 0, 0};
+    for (int i =0; i < max_inliers.size(); i++)
+    {
+        cout << _i_p[max_inliers[i]] << endl;
+        cout << _i_r[max_inliers[i]] << endl;
+        _init_p += _i_p[max_inliers[i]];
+        ypr += Utility::R2ypr(_i_r[max_inliers[i]]);
+    }
+    _init_p = _init_p / max_inliers.size();
+    _init_r = Utility::ypr2R(ypr / max_inliers.size());
+    return true;
+}
+
 void process()
 {
-    while (!init)
+    while (true)
     {
         sensor_msgs::ImageConstPtr image_msg = NULL;
         sensor_msgs::PointCloudConstPtr point_msg = NULL;
@@ -386,11 +460,11 @@ void process()
                 
                 KeyFrame* cur_kf = new KeyFrame(pose_msg->header.stamp.toSec(), global_index, T, R, image, point_3d, point_2d_uv, point_2d_normal, point_id);
                 global_index++;
-        
+
                 DBoW2::QueryResults ret;
-                db.query(cur_kf->brief_descriptors, ret, 10, -1);
+                db.query(cur_kf->brief_descriptors, ret, 100, -1);
                 
-                if (DEBUG_IMAGE)
+                if (DEBUG_IMAGE && false)
                 {
                     cv::Mat compressed_image;
                     int feature_num = cur_kf->keypoints.size();
@@ -415,38 +489,53 @@ void process()
                     cv::waitKey(5);
                 }
                 
-                Vector3d init_p(0, 0, 0);
-                Matrix3d init_r;
-                Vector3d ypr(0, 0, 0);
-                if (ret[0].Score > 0.03)
+                if (ret.size() >= 1 && ret[0].Score > 0.015)
                 {
-                    //cout << ret << endl;
+                    
+                    Vector3d init_p{0, 0, 0};
+                    Matrix3d init_r;
+                    
                     Vector3d vio_P;
                     Matrix3d vio_R;
                     KeyFrame* old_kf;
-                
                     
+                    vector<Vector3d> i_p;
+                    vector<Matrix3d> i_r;
                     int index = 0;
-                    while (ret[index].Score > 0.03 && index < ret.size())
+                    while (ret[index].Score > 0.015 && index < ret.size())
                     {
                         old_kf = getKeyFrame(ret[index].Id);
                         old_kf->getVioPose(vio_P, vio_R);
-                        init_p += vio_P;
-                        ypr += Utility::R2ypr(vio_R);
                         index++;
+                        
+                        Vector3d relative_t; 
+                        Matrix3d relative_r;
+                        m_process.lock();
+                        if (cur_kf->findConnection(old_kf, relative_t, relative_r))
+                        {
+                            //cout << vio_R * relative_t + vio_P << endl;
+                            //cout << vio_R * relative_r << endl;
+                            i_p.push_back(vio_R * relative_t + vio_P);
+                            i_r.push_back(vio_R * relative_r);
+                        }
+                        m_process.unlock();
                     }
-                    init_p = init_p / index;
-                    init_p.z() = 0;
-                    init_r = Utility::ypr2R(ypr / index);
                     
-                    cout << init_p << endl;
-                    cout << init_r << endl;
-                    
-                    //init_r = r_drift * R;
-                    //init_p = r_drift * T + t_drift;
-                    r_drift = init_r * R.transpose();
-                    t_drift = init_p - r_drift * T;
-                    init = true;
+                    if (p_r_RANSAC(i_p, i_r, init_p, init_r))
+                    {
+                        cout << "++++" << endl;
+                        cout << init_p << endl;
+                        cout << init_r << endl;
+                        cout << "====" << endl;
+                        
+                        //init_r = r_drift * R;
+                        //init_p = r_drift * T + t_drift;
+                        m_init.lock();
+                        r_drift = init_r * R.transpose();
+                        t_drift = init_p - r_drift * T;
+                        m_init.unlock();
+                        init = true;
+                    }
                 }
             }
         }
@@ -462,6 +551,14 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "init");
     ros::NodeHandle n("~");
     
+    if(argc > 2)
+    {
+        printf("please intput: rosrun init init [config file] \n"
+               "for example: rosrun init init"
+               "/home/tony-ws1/catkin_ws/src/VINS-Fusion/config/euroc/euroc_stereo_imu_config.yaml \n");
+        return 0;
+    }
+    
     //加载字典文件
     std::string pkg_path = ros::package::getPath("init");
     string vocabulary_file = pkg_path + "/../support_files/brief_k10L6.bin";
@@ -473,20 +570,52 @@ int main(int argc, char **argv)
     BRIEF_PATTERN_FILE = pkg_path + "/../support_files/brief_pattern.yml";
     cout << "BRIEF_PATTERN_FILE:\t" << BRIEF_PATTERN_FILE << endl;
     
-    //设置pose_graph保存路径
-    POSE_GRAPH_SAVE_PATH = pkg_path + "/pose_graph/";
-    cout << "POSE_GRAPH_SAVE_PATH:\t" << POSE_GRAPH_SAVE_PATH << endl;
+    if (argc == 2)
+    {
+        string config_file = argv[1];
+        printf("config_file: %s\n", argv[1]);
+        cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
+        if(!fsSettings.isOpened())
+        {
+            std::cerr << "ERROR: Wrong path to settings" << std::endl;
+            return 1;
+        }
+        
+        //设置pose_graph保存路径
+        fsSettings["init_pose_graph_save_path"] >> POSE_GRAPH_SAVE_PATH;
+        cout << "POSE_GRAPH_SAVE_PATH:\t" << POSE_GRAPH_SAVE_PATH << endl;
     
-    m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile("/home/sxsqli/Desktop/test/yaml_new/left_c.yaml");
+        int pn = config_file.find_last_of('/');
+        std::string configPath = config_file.substr(0, pn);
+        std::string cam0Calib;
+        fsSettings["cam0_calib"] >> cam0Calib;
+        std::string cam0Path = configPath + "/" + cam0Calib;
+        cout << "camera yaml:\t" << cam0Path << endl;
+        m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile(cam0Path.c_str());
+    }
+    else
+    {
+        //设置pose_graph保存路径
+        POSE_GRAPH_SAVE_PATH = pkg_path + "/pose_graph/";
+        cout << "POSE_GRAPH_SAVE_PATH:\t" << POSE_GRAPH_SAVE_PATH << endl;
+        
+        cout << "camera yaml:\t" << "/home/sxsqli/Desktop/test/yaml_new/left_c.yaml" << endl;
+        m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile("/home/sxsqli/Desktop/test/yaml_new/left_c.yaml");
+    }
     
+    m_process.lock();
     loadPoseGraph();
-    
+    m_process.unlock();
     
     ros::Subscriber sub_image = n.subscribe("/mynteye/left/image_raw", 2000, image_callback);
     ros::Subscriber sub_pose = n.subscribe("/vins_estimator/keyframe_pose", 2000, pose_callback);
     ros::Subscriber sub_point = n.subscribe("/vins_estimator/keyframe_point", 2000, point_callback);
     
-    pub_keyframe_pose = n.advertise<nav_msgs::Odometry>("keyframe_pose", 1000);
+    ros::Subscriber sub_extrinsic = n.subscribe("/vins_estimator/extrinsic", 2000, extrinsic_callback);
+    
+    ros::Subscriber sub_odometry = n.subscribe("/loop_fusion/odometry_rect", 2000, odometry_callback);
+    
+    pub_odometry_map = n.advertise<nav_msgs::Odometry>("odometry_map", 1000);
     
     std::thread measurement_process{process};
     

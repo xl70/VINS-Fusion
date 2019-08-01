@@ -308,28 +308,224 @@ void KeyFrame::updateVioPose(const Eigen::Vector3d &_T_w_i, const Eigen::Matrix3
     R_w_i = vio_R_w_i;
 }
 
-/*
-Eigen::Vector3d KeyFrame::getLoopRelativeT()
+bool KeyFrame::findConnection(KeyFrame* old_kf,Eigen::Vector3d &_relative_t, Eigen::Matrix3d &_relative_r)
 {
-    return Eigen::Vector3d(loop_info(0), loop_info(1), loop_info(2));
-}
+        TicToc tmp_t;
+        vector<cv::Point2f> matched_2d_cur, matched_2d_old;
+        vector<cv::Point2f> matched_2d_cur_norm, matched_2d_old_norm;
+        vector<cv::Point3f> matched_3d;
+        vector<double> matched_id;
+        vector<uchar> status;
 
-Eigen::Quaterniond KeyFrame::getLoopRelativeQ()
-{
-    return Eigen::Quaterniond(loop_info(3), loop_info(4), loop_info(5), loop_info(6));
-}
+        matched_3d = point_3d;
+        matched_2d_cur = point_2d_uv;
+        matched_2d_cur_norm = point_2d_norm;
+        matched_id = point_id;
 
-double KeyFrame::getLoopRelativeYaw()
-{
-    return loop_info(7);
-}
+        TicToc t_match;
+        #if 0
+        if (DEBUG_IMAGE)    
+        {
+            cv::Mat gray_img, loop_match_img;
+            cv::Mat old_img = old_kf->image;
+            cv::hconcat(image, old_img, gray_img);
+            cvtColor(gray_img, loop_match_img, CV_GRAY2RGB);
+            for(int i = 0; i< (int)point_2d_uv.size(); i++)
+            {
+                cv::Point2f cur_pt = point_2d_uv[i];
+                cv::circle(loop_match_img, cur_pt, 5, cv::Scalar(0, 255, 0));
+            }
+            for(int i = 0; i< (int)old_kf->keypoints.size(); i++)
+            {
+                cv::Point2f old_pt = old_kf->keypoints[i].pt;
+                old_pt.x += COL;
+                cv::circle(loop_match_img, old_pt, 5, cv::Scalar(0, 255, 0));
+            }
+            ostringstream path;
+            path << "/home/tony-ws1/raw_data/loop_image/"
+                << index << "-"
+                << old_kf->index << "-" << "0raw_point.jpg";
+            cv::imwrite( path.str().c_str(), loop_match_img);
+        }
+        #endif
+        //printf("search by des\n");
+        searchByBRIEFDes(matched_2d_old, matched_2d_old_norm, status, old_kf->brief_descriptors, old_kf->keypoints, old_kf->keypoints_norm);
+        reduceVector(matched_2d_cur, status);
+        reduceVector(matched_2d_old, status);
+        reduceVector(matched_2d_cur_norm, status);
+        reduceVector(matched_2d_old_norm, status);
+        reduceVector(matched_3d, status);
+        reduceVector(matched_id, status);
+        //printf("search by des finish\n");
 
-void KeyFrame::updateLoop(Eigen::Matrix<double, 8, 1 > &_loop_info)
-{
-    if (abs(_loop_info(7)) < 30.0 && Vector3d(_loop_info(0), _loop_info(1), _loop_info(2)).norm() < 20.0)
-    {
-        //printf("update loop info\n");
-        loop_info = _loop_info;
-    }
+        #if 0 
+        if (DEBUG_IMAGE)
+        {
+            int gap = 10;
+            cv::Mat gap_image(ROW, gap, CV_8UC1, cv::Scalar(255, 255, 255));
+            cv::Mat gray_img, loop_match_img;
+            cv::Mat old_img = old_kf->image;
+            cv::hconcat(image, gap_image, gap_image);
+            cv::hconcat(gap_image, old_img, gray_img);
+            cvtColor(gray_img, loop_match_img, CV_GRAY2RGB);
+            for(int i = 0; i< (int)matched_2d_cur.size(); i++)
+            {
+                cv::Point2f cur_pt = matched_2d_cur[i];
+                cv::circle(loop_match_img, cur_pt, 5, cv::Scalar(0, 255, 0));
+            }
+            for(int i = 0; i< (int)matched_2d_old.size(); i++)
+            {
+                cv::Point2f old_pt = matched_2d_old[i];
+                old_pt.x += (COL + gap);
+                cv::circle(loop_match_img, old_pt, 5, cv::Scalar(0, 255, 0));
+            }
+            for (int i = 0; i< (int)matched_2d_cur.size(); i++)
+            {
+                cv::Point2f old_pt = matched_2d_old[i];
+                old_pt.x +=  (COL + gap);
+                cv::line(loop_match_img, matched_2d_cur[i], old_pt, cv::Scalar(0, 255, 0), 1, 8, 0);
+            }
+
+            ostringstream path, path1, path2;
+            path << "/home/tony-ws1/raw_data/loop_image/"
+                << index << "-"
+                << old_kf->index << "-" << "1descriptor_match.jpg";
+            cv::imwrite( path.str().c_str(), loop_match_img);
+            /*
+            path1 << "/home/tony-ws1/raw_data/loop_image/"
+                << index << "-"
+                << old_kf->index << "-" << "1descriptor_match_1.jpg";
+            cv::imwrite( path1.str().c_str(), image);
+            path2 << "/home/tony-ws1/raw_data/loop_image/"
+                << index << "-"
+                << old_kf->index << "-" << "1descriptor_match_2.jpg";
+            cv::imwrite( path2.str().c_str(), old_img);             
+            */
+            
+        }
+        #endif
+        /*
+        FundmantalMatrixRANSAC(matched_2d_cur_norm, matched_2d_old_norm, status);
+        reduceVector(matched_2d_cur, status);
+        reduceVector(matched_2d_old, status);
+        reduceVector(matched_2d_cur_norm, status);
+        reduceVector(matched_2d_old_norm, status);
+        reduceVector(matched_3d, status);
+        reduceVector(matched_id, status);
+        */
+        #if 0
+        if (DEBUG_IMAGE)
+        {
+            int gap = 10;
+            cv::Mat gap_image(ROW, gap, CV_8UC1, cv::Scalar(255, 255, 255));
+            cv::Mat gray_img, loop_match_img;
+            cv::Mat old_img = old_kf->image;
+            cv::hconcat(image, gap_image, gap_image);
+            cv::hconcat(gap_image, old_img, gray_img);
+            cvtColor(gray_img, loop_match_img, CV_GRAY2RGB);
+            for(int i = 0; i< (int)matched_2d_cur.size(); i++)
+            {
+                cv::Point2f cur_pt = matched_2d_cur[i];
+                cv::circle(loop_match_img, cur_pt, 5, cv::Scalar(0, 255, 0));
+            }
+            for(int i = 0; i< (int)matched_2d_old.size(); i++)
+            {
+                cv::Point2f old_pt = matched_2d_old[i];
+                old_pt.x += (COL + gap);
+                cv::circle(loop_match_img, old_pt, 5, cv::Scalar(0, 255, 0));
+            }
+            for (int i = 0; i< (int)matched_2d_cur.size(); i++)
+            {
+                cv::Point2f old_pt = matched_2d_old[i];
+                old_pt.x +=  (COL + gap) ;
+                cv::line(loop_match_img, matched_2d_cur[i], old_pt, cv::Scalar(0, 255, 0), 1, 8, 0);
+            }
+
+            ostringstream path;
+            path << "/home/tony-ws1/raw_data/loop_image/"
+                << index << "-"
+                << old_kf->index << "-" << "2fundamental_match.jpg";
+            cv::imwrite( path.str().c_str(), loop_match_img);
+        }
+        #endif
+        Eigen::Vector3d PnP_T_old;
+        Eigen::Matrix3d PnP_R_old;
+        double relative_yaw;
+        if ((int)matched_2d_cur.size() > MIN_LOOP_NUM)
+        {
+            status.clear();
+            PnPRANSAC(matched_2d_old_norm, matched_3d, status, PnP_T_old, PnP_R_old);
+            reduceVector(matched_2d_cur, status);
+            reduceVector(matched_2d_old, status);
+            reduceVector(matched_2d_cur_norm, status);
+            reduceVector(matched_2d_old_norm, status);
+            reduceVector(matched_3d, status);
+            reduceVector(matched_id, status);
+            #if 1
+            if (DEBUG_IMAGE)
+            {
+                int gap = 10;
+                cv::Mat gap_image(ROW, gap, CV_8UC1, cv::Scalar(255, 255, 255));
+                cv::Mat gray_img, loop_match_img;
+                cv::Mat old_img = old_kf->image;
+                cv::hconcat(image, gap_image, gap_image);
+                cv::hconcat(gap_image, old_img, gray_img);
+                cvtColor(gray_img, loop_match_img, CV_GRAY2RGB);
+                for(int i = 0; i< (int)matched_2d_cur.size(); i++)
+                {
+                    cv::Point2f cur_pt = matched_2d_cur[i];
+                    cv::circle(loop_match_img, cur_pt, 5, cv::Scalar(0, 255, 0));
+                }
+                for(int i = 0; i< (int)matched_2d_old.size(); i++)
+                {
+                    cv::Point2f old_pt = matched_2d_old[i];
+                    old_pt.x += (COL + gap);
+                    cv::circle(loop_match_img, old_pt, 5, cv::Scalar(0, 255, 0));
+                }
+                for (int i = 0; i< (int)matched_2d_cur.size(); i++)
+                {
+                    cv::Point2f old_pt = matched_2d_old[i];
+                    old_pt.x += (COL + gap) ;
+                    cv::line(loop_match_img, matched_2d_cur[i], old_pt, cv::Scalar(0, 255, 0), 2, 8, 0);
+                }
+                cv::Mat notation(50, COL + gap + COL, CV_8UC3, cv::Scalar(255, 255, 255));
+                cv::putText(notation, "current frame: " + to_string(index), cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 3);
+
+                cv::putText(notation, "previous frame: " + to_string(old_kf->index), cv::Point2f(20 + COL + gap, 30), CV_FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 3);
+                cv::vconcat(notation, loop_match_img, loop_match_img);
+
+                /*
+                ostringstream path;
+                path <<  "/home/tony-ws1/raw_data/loop_image/"
+                        << index << "-"
+                        << old_kf->index << "-" << "3pnp_match.jpg";
+                cv::imwrite( path.str().c_str(), loop_match_img);
+                */
+                if ((int)matched_2d_cur.size() > MIN_LOOP_NUM)
+                {
+                    cv::imshow("loop connection",loop_match_img);  
+                    cv::waitKey(10);  
+                }
+            }
+            #endif
+        }
+
+        if ((int)matched_2d_cur.size() > MIN_LOOP_NUM)
+        {
+            _relative_t = PnP_R_old.transpose() * (origin_vio_T - PnP_T_old);
+            _relative_r = PnP_R_old.transpose() * origin_vio_R;
+            relative_yaw = Utility::normalizeAngle(Utility::R2ypr(origin_vio_R).x() - Utility::R2ypr(PnP_R_old).x());
+            if (abs(relative_yaw) < 30.0 && _relative_t.norm() < 20.0)
+            {
+                /*
+                cout << PnP_T_old << "\tpnp T old"  << endl;
+                cout << PnP_R_old << "\tpnp R old"  << endl;
+                cout << _relative_t << "\tpnp relative_t"  << endl;
+                cout << _relative_r << "\tpnp relative_r"  << endl;
+                */
+                return true;
+            }
+        }
+        //printf("loop final use num %d %lf--------------- \n", (int)matched_2d_cur.size(), t_match.toc());
+        return false;
 }
-*/

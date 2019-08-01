@@ -79,6 +79,7 @@ public:
     void getPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i);
     void updatePose(const Eigen::Vector3d &_T_w_i, const Eigen::Matrix3d &_R_w_i);
     void updateVioPose(const Eigen::Vector3d &_T_w_i, const Eigen::Matrix3d &_R_w_i);
+    bool findConnection(KeyFrame* old_kf,Eigen::Vector3d &_relative_t, Eigen::Matrix3d &_relative_q);
     
     //void updateLoop(Eigen::Matrix<double, 8, 1 > &_loop_info);
     //Eigen::Vector3d getLoopRelativeT();
