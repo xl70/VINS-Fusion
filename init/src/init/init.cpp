@@ -177,6 +177,7 @@ void loadPoseGraph()
     int keypoints_num;
     int window_keypoints_num;
     Eigen::Matrix<double, 8, 1 > loop_info;
+    /*
     while (fscanf(pFile,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf %lf %d %d", 
                                     &index, &time_stamp, 
                                     &VIO_Tx, &VIO_Ty, &VIO_Tz, 
@@ -187,6 +188,17 @@ void loadPoseGraph()
                                     &loop_info_0, &loop_info_1, &loop_info_2, &loop_info_3, 
                                     &loop_info_4, &loop_info_5, &loop_info_6, &loop_info_7,
                                     &keypoints_num, &window_keypoints_num) != EOF) 
+    */
+    while (fscanf(pFile,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf %lf %d", 
+                            &index, &time_stamp, 
+                            &VIO_Tx, &VIO_Ty, &VIO_Tz, 
+                            &PG_Tx, &PG_Ty, &PG_Tz, 
+                            &VIO_Qw, &VIO_Qx, &VIO_Qy, &VIO_Qz, 
+                            &PG_Qw, &PG_Qx, &PG_Qy, &PG_Qz, 
+                            &loop_index,
+                            &loop_info_0, &loop_info_1, &loop_info_2, &loop_info_3, 
+                            &loop_info_4, &loop_info_5, &loop_info_6, &loop_info_7,
+                            &keypoints_num) != EOF) 
     {
         cv::Mat image;
         std::string image_path, descriptor_path;
@@ -242,6 +254,7 @@ void loadPoseGraph()
         fclose(keypoints_file);
         
         // load point_uv
+        /*
         string window_brief_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_window_briefdes.dat";
         std::ifstream window_brief_file(window_brief_path, std::ios::binary);
         string window_keypoints_path = POSE_GRAPH_SAVE_PATH + to_string(index) + "_window_keypoints.txt";
@@ -275,7 +288,12 @@ void loadPoseGraph()
         }
         window_brief_file.close();
         fclose(window_keypoints_file);
+        */
 
+        vector<cv::Point3f> point_3d; 
+        vector<cv::Point2f> point_2d_uv;
+        vector<cv::Point2f> point_2d_norm;
+        vector<BRIEF::bitset> window_brief_descriptors;
         KeyFrame* keyframe = new KeyFrame(time_stamp, index, VIO_T, VIO_R, PG_T, PG_R, image, loop_index, loop_info, keypoints, keypoints_norm, brief_descriptors,
             point_3d, point_2d_uv, point_2d_norm, window_brief_descriptors);
         cout << keyframe->point_3d.size() << "," 
