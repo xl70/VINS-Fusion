@@ -189,16 +189,16 @@ void loadPoseGraph()
                                     &loop_info_4, &loop_info_5, &loop_info_6, &loop_info_7,
                                     &keypoints_num, &window_keypoints_num) != EOF) 
     */
-    while (fscanf(pFile,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf %lf %d", 
-                            &index, &time_stamp, 
-                            &VIO_Tx, &VIO_Ty, &VIO_Tz, 
-                            &PG_Tx, &PG_Ty, &PG_Tz, 
-                            &VIO_Qw, &VIO_Qx, &VIO_Qy, &VIO_Qz, 
-                            &PG_Qw, &PG_Qx, &PG_Qy, &PG_Qz, 
+    while (fscanf(pFile,"%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %lf %lf %lf %lf %lf %lf %lf %lf %d",
+                            &index, &time_stamp,
+                            &VIO_Tx, &VIO_Ty, &VIO_Tz,
+                            &PG_Tx, &PG_Ty, &PG_Tz,
+                            &VIO_Qw, &VIO_Qx, &VIO_Qy, &VIO_Qz,
+                            &PG_Qw, &PG_Qx, &PG_Qy, &PG_Qz,
                             &loop_index,
-                            &loop_info_0, &loop_info_1, &loop_info_2, &loop_info_3, 
+                            &loop_info_0, &loop_info_1, &loop_info_2, &loop_info_3,
                             &loop_info_4, &loop_info_5, &loop_info_6, &loop_info_7,
-                            &keypoints_num) != EOF) 
+                            &keypoints_num) != EOF)
     {
         cv::Mat image;
         std::string image_path, descriptor_path;
@@ -290,7 +290,7 @@ void loadPoseGraph()
         fclose(window_keypoints_file);
         */
 
-        vector<cv::Point3f> point_3d; 
+        vector<cv::Point3f> point_3d;
         vector<cv::Point2f> point_2d_uv;
         vector<cv::Point2f> point_2d_norm;
         vector<BRIEF::bitset> window_brief_descriptors;
