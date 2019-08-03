@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="loop_fusion" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="$(find launch_pkg)/camera_config/mynteye_stereo_imu_config.yaml" />
+</launch>

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+  <!--node name="ros_bag" pkg="rosbag" type="play" output="screen" args="/home/sxsqli/Desktop/workspace/slam/data_output/rosbag_output/office_2019-06-27-08-33-54.bag" /-->
+  <!--node name="loop_fusion" pkg="loop_fusion" type="loop_fusion_node" output="screen" args="/home/sxsqli/Desktop/workspace/slam/yaml/mynteye_stereo_imu_config.yaml" /-->
+  <node name="vins_estimator" pkg="vins" type="vins_node" output="screen" args="/home/sxsqli/Desktop/workspace/slam/yaml/mynteye_stereo_imu_config.yaml" />
+  <include file="$(find vins)/launch/vins_rviz.launch" />
+</launch>

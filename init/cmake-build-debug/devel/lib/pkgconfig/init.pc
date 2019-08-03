@@ -1,0 +1,8 @@
+prefix=/home/chewgum/slam/slam_ws/src/VINS-Fusion-master/init/cmake-build-debug/devel
+
+Name: init
+Description: Description of init
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/chewgum/slam/slam_ws/src/VINS-Fusion-master/init/cmake-build-debug/devel/lib 
+Requires: 

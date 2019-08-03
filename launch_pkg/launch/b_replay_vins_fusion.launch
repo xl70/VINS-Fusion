@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <!--<include file="$(find mynt_eye_ros_wrapper)/launch/slam/vins_fusion.launch" /-->
+   
+    <node name="ros_bag" pkg="rosbag" type="play" output="screen" args="/home/chewgum/ros_bagfile/round_1_2019-07-23-09-14-40.bag" />
+    <!-- round_1_2019-07-23-09-14-40.bag   round_2_2019-07-23-09-16-34.bag /-->
+</launch>

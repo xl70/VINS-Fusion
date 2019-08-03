@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/chewgum/slam/slam_ws/src/VINS-Fusion-master/init/cmake-build-debug/devel/setup.sh

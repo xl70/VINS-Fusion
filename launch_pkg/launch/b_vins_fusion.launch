@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find mynt_eye_ros_wrapper)/launch/slam/vins_fusion.launch" />
+  <node name="vins_estimator" pkg="vins" type="vins_node" output="screen" args="$(find launch_pkg)/camera_config/mynteye_stereo_imu_config.yaml" />
+</launch>
