@@ -85,12 +85,12 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /loop_fusion/exist_graph_path
+      Topic: /init/exist_graph_path
       Unreliable: false
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /loop_fusion/point_and_text_marker
+      Marker Topic: /init/point_and_text_marker
       Name: point_text_maker
       Namespaces:
         "": true
