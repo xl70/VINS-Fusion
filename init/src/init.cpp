@@ -6,6 +6,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Bool.h>
 #include <cv_bridge/cv_bridge.h>
 #include <iostream>
@@ -59,6 +60,212 @@ Matrix3d r_drift;
 bool init = false;
 ros::Publisher pub_odometry_map;
 
+nav_msgs::Path my_exist_path; // 消息体；用于显示存在了地图  在rviz显示
+ros::Publisher pub_exist_path; // 发布消息体的主题；已经存在并保存好的地图  在初始化启动时候便发布
+
+visualization_msgs::MarkerArray my_point_and_text; //  消息体；用于显示点与文字   在rviz显示
+ros::Publisher pub_point_and_text; // 发布消息体的主题；重定位显示等需要发布
+
+//模板函数：将string类型变量转换为常用的数值类型（此方法具有普遍适用性）
+template <class Type>
+Type stringToNum(const string& str)
+{
+    istringstream iss(str);
+    Type num;
+    iss >> num;
+    return num;
+}
+
+void pub_exist_graph()  // 发布已经存在的地图, 1.读取vio_loop文件  2.构造nav_msg  3.发布消息体
+{
+
+    ifstream inFile( ros::package::getPath("init") + "/../source/vio_loop.csv", ios::in);
+    string lineStr;
+    cout<< "read --------"<<endl;
+
+    ros::Time current_time;
+    current_time = ros::Time::now();
+
+    my_exist_path.header.stamp=current_time;
+    my_exist_path.header.frame_id="map";
+
+    while (getline(inFile, lineStr))
+    {
+        // 打印整行字符串
+        // cout << lineStr << endl;
+        // 存成二维表结构
+        stringstream ss(lineStr);
+        string str;
+        vector<string> lineArray;
+        // 按照逗号分隔
+        while (getline(ss, str, ','))  // atof
+            lineArray.push_back(str);
+        geometry_msgs::PoseStamped pose_stamped;
+
+        pose_stamped.header.stamp = ros::Time(stringToNum<int>(lineArray[0]));// string 转为 double 再转为ros::Time
+        pose_stamped.header.frame_id = "map";
+
+        pose_stamped.pose.position.x = stringToNum<float>(lineArray[1]) ;  // VISUALIZATION_SHIFT_X = 0
+        pose_stamped.pose.position.y = stringToNum<float>(lineArray[2]) ;  // VISUALIZATION_SHIFT_Y = 0
+        pose_stamped.pose.position.z = stringToNum<float>(lineArray[3]);
+        pose_stamped.pose.orientation.x = stringToNum<float>(lineArray[4]);
+        pose_stamped.pose.orientation.y = stringToNum<float>(lineArray[5]);
+        pose_stamped.pose.orientation.z = stringToNum<float>(lineArray[6]);
+        pose_stamped.pose.orientation.w = stringToNum<float>(lineArray[7]);
+
+        my_exist_path.poses.push_back(pose_stamped);
+
+        // 话题 发布
+        pub_exist_path.publish(my_exist_path);
+        ros::spinOnce();
+    }
+    cout << "已存地图路线话题发布完成" << endl;
+    inFile.close();
+}
+void pub_point_and_text_maker(float x, float y,const char* text)  //
+{
+    static  int k = 0;
+    visualization_msgs::Marker marker;
+    marker.header.frame_id="map";  //必须是 world ,在同一个tf下
+    marker.header.stamp = ros::Time::now();
+    //  marker.ns = "basic_shapes";
+    marker.action = visualization_msgs::Marker::ADD;
+
+    marker.id =k;
+    marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+
+    marker.scale.z = 0.8;
+    marker.color.b = 0;
+    marker.color.g = 0;
+    marker.color.r = 1;
+    marker.color.a = 1;
+
+    marker.pose.position.x = x ;
+    marker.pose.position.y = y + 2;
+    marker.pose.position.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+
+    ostringstream str;
+    str<<text;
+    marker.text=str.str();
+
+    my_point_and_text.markers.push_back(marker);
+    k++;
+
+    marker.id =k;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = x;
+    marker.pose.position.y = y;
+    marker.pose.position.z = 1;
+
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.3;
+    marker.scale.y = 0.3;
+    marker.scale.z = 0.3;
+    marker.color.a = 1.0; // Don't forget to set the alpha!
+    marker.color.r = 0;
+    marker.color.g = 1;
+    marker.color.b = 0;
+
+    my_point_and_text.markers.push_back(marker);
+    k++;
+
+    cout<<"发布标志 ---- "<<text<<endl;
+//    cout<<"markerArray.markers.size()"<<my_point_and_text.markers.size()<<endl;
+    pub_point_and_text.publish(my_point_and_text);
+
+}
+void pub_point_and_text_maker(float x, float y,float x2, float y2,const char* text)  //
+{
+    static  int k = 0;
+    visualization_msgs::Marker marker;
+    marker.header.frame_id="map";  //必须是 world ,在同一个tf下
+    marker.header.stamp = ros::Time::now();
+    //  marker.ns = "basic_shapes";
+    marker.action = visualization_msgs::Marker::ADD;
+
+    marker.id =k;
+    marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+
+    marker.scale.z = 0.8;
+    marker.color.b = 0;
+    marker.color.g = 0;
+    marker.color.r = 1;
+    marker.color.a = 1;
+
+    marker.pose.position.x = x ;
+    marker.pose.position.y = y + 2;
+    marker.pose.position.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+
+    ostringstream str;
+    str<<text;
+    marker.text=str.str();
+
+    my_point_and_text.markers.push_back(marker);
+    k++;
+
+    marker.id =k;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = x;
+    marker.pose.position.y = y;
+    marker.pose.position.z = 1;
+
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.3;
+    marker.scale.y = 0.3;
+    marker.scale.z = 0.3;
+    marker.color.a = 1.0; // Don't forget to set the alpha!
+    marker.color.r = 0;
+    marker.color.g = 1;
+    marker.color.b = 0;
+
+    my_point_and_text.markers.push_back(marker);
+    k++;
+
+    visualization_msgs::Marker arrow_marker;
+    arrow_marker.id =k;
+    arrow_marker.type = visualization_msgs::Marker::ARROW;  //箭头
+    arrow_marker.header.frame_id="map";                   //必须是 world ,在同一个tf下
+    arrow_marker.header.stamp = ros::Time::now();
+    arrow_marker.action = visualization_msgs::Marker::ADD;
+    geometry_msgs::Point p;
+    p.x = x;
+    p.y = y;
+    p.z = 0;
+    arrow_marker.points.push_back(p);       // 起点
+    p.x = x2;
+    p.y = y2;
+    p.z = 0;
+    arrow_marker.points.push_back(p);       // 终点
+
+    arrow_marker.scale.x = 0.08;  // 箭柄直径
+    arrow_marker.scale.y = 0.4;   // 箭头直径
+    arrow_marker.scale.z = 0.6;     // 箭头的长度
+
+    arrow_marker.color.a = 1.0; // Don't forget to set the alpha!
+    arrow_marker.color.r = 1;
+    arrow_marker.color.g = 1;
+    arrow_marker.color.b = 1;
+    my_point_and_text.markers.push_back(arrow_marker);
+    k++;
+    cout<<"发布标志 ---- "<<text<<endl;
+//    cout<<"markerArray.markers.size()"<<my_point_and_text.markers.size()<<endl;
+    pub_point_and_text.publish(my_point_and_text);
+
+}
 
 
 void image_callback(const sensor_msgs::ImageConstPtr &image_msg)
@@ -328,10 +535,10 @@ KeyFrame* getKeyFrame(int index)
 bool p_r_RANSAC(vector<Vector3d> &_i_p, vector<Matrix3d> &_i_r, Vector3d &_init_p, Matrix3d &_init_r)
 {
     vector<int> max_inliers;
-    for (int i = 0; i < _i_p.size(); i++)
+    for (unsigned int i = 0; i < _i_p.size(); i++)
     {
         vector<int> inliers;
-        for (int j = 0; j < _i_p.size(); j++)
+        for (unsigned int j = 0; j < _i_p.size(); j++)
         {
             double dis = (_i_p[i] - _i_p[j]).norm();
             if (dis < 0.5)
@@ -353,7 +560,7 @@ bool p_r_RANSAC(vector<Vector3d> &_i_p, vector<Matrix3d> &_i_r, Vector3d &_init_
     _init_p.y() = 0;
     _init_p.z() = 0;
     Vector3d ypr{0, 0, 0};
-    for (int i =0; i < max_inliers.size(); i++)
+    for (unsigned int i =0; i < max_inliers.size(); i++)
     {
         cout << _i_p[max_inliers[i]] << endl;
         cout << _i_r[max_inliers[i]] << endl;
@@ -507,7 +714,7 @@ void process()
                     
                     vector<Vector3d> i_p;
                     vector<Matrix3d> i_r;
-                    int index = 0;
+                    unsigned int index = 0;
                     while (ret[index].Score > 0.015 && index < ret.size())
                     {
                         old_kf = getKeyFrame(ret[index].Id);
@@ -547,6 +754,23 @@ void process()
         }
         
         
+        std::chrono::milliseconds dura(5);
+        std::this_thread::sleep_for(dura);
+    }
+}
+
+void command()
+{
+    while(1)
+    {
+        char c = getchar();
+        if (c == 'p')   // 发布path
+            pub_exist_graph();
+
+        if (c == 'o')   // 发布起点
+        {
+            pub_point_and_text_maker(0.0,0.0,"origin(0,0)");
+        }
         std::chrono::milliseconds dura(5);
         std::this_thread::sleep_for(dura);
     }
@@ -602,20 +826,20 @@ int main(int argc, char **argv)
     else
     {
         //设置pose_graph保存路径
-        POSE_GRAPH_SAVE_PATH = pkg_path + "/pose_graph/";
+        POSE_GRAPH_SAVE_PATH = pkg_path + "/../source/pose_graph/";
         cout << "POSE_GRAPH_SAVE_PATH:\t" << POSE_GRAPH_SAVE_PATH << endl;
         
-        cout << "camera yaml:\t" << "/home/chewgum/slam/slam_ws/src/VINS-Fusion-master/source/camera_config/left_mynt_eye.yaml" << endl;
-        m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile("/home/chewgum/slam/slam_ws/src/VINS-Fusion-master/source/camera_config/left_mynt_eye.yaml");
+        cout << "camera yaml:\t" << ros::package::getPath("launch_pkg") + "/camera_config/left_mynt_eye.yaml" << endl;
+        m_camera = camodocal::CameraFactory::instance()->generateCameraFromYamlFile(ros::package::getPath("launch_pkg")  + "/camera_config/left_mynt_eye.yaml");
     }
     
     m_process.lock();
     loadPoseGraph();
     m_process.unlock();
 
-//    // 发布的类型属于 nav_msgs::Odometry
-//    pub_exist_path = n.advertise<nav_msgs::Path>("exist_graph_path", 80000);  // 已经存在并保存好的地图  在初始化启动时候便发布
-//    pub_point_and_text = n.advertise<visualization_msgs::MarkerArray>("point_and_text_marker", 10);
+    // 发布的类型属于 nav_msgs::Odometry
+    pub_exist_path = n.advertise<nav_msgs::Path>("exist_graph_path", 80000);  // 已经存在并保存好的地图  在初始化启动时候便发布
+    pub_point_and_text = n.advertise<visualization_msgs::MarkerArray>("point_and_text_marker", 10);
 
     ros::Subscriber sub_image = n.subscribe("/mynteye/left/image_raw", 2000, image_callback);
     ros::Subscriber sub_pose = n.subscribe("/vins_estimator/keyframe_pose", 2000, pose_callback);
@@ -628,7 +852,7 @@ int main(int argc, char **argv)
     pub_odometry_map = n.advertise<nav_msgs::Odometry>("odometry_map", 1000);
     
     std::thread measurement_process{process};
-    
+    std::thread measurement_process{command};
     ros::spin();
     return 0;
 }
