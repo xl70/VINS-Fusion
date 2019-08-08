@@ -17,3 +17,4 @@ camera_chessboard_data.dat
 *.kdev4
 .idea/
 pose_graph/
+cmake-build-debug/

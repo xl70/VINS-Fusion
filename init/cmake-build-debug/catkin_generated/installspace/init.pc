@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: init
-Description: Description of init
-Version: 0.0.0
-Cflags: 
-Libs: -L/usr/local/lib 
-Requires: 
