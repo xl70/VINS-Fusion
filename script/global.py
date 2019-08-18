@@ -296,12 +296,11 @@ if __name__ == '__main__':
         UI = True
    #     cv2.namedWindow('result', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_FREERATIO)
 
-
-
     map_grid_bgr, ORIGIN_X, ORIGIN_Y, MAP_WIDTH, MAP_HEIGHT, start_x, start_y, goal_x, goal_y = \
         generate_map_grid_from_vio_loop('../source/vio_loop.csv')
 
     start = (ORIGIN_X + start_x, ORIGIN_Y + start_y)
+
     print("start_x {} start_y {}".format(start_x,start_y))
     print("start {} ".format(start))
     goal = (ORIGIN_X + goal_x, ORIGIN_Y + goal_y)

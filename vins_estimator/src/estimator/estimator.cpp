@@ -157,12 +157,20 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     }
 }
 
+/*
+ * 功能：  对输入的左右目图片进行状态估计等处理
+          对输入图片处理获取其 特征Frame
+ * 输入：  图片时间戳; 左目图片; 右目图片
+ * 返回值：  void
+ * */
 void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
 {
     inputImageCnt++;
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     TicToc featureTrackerTime;
 
+    // 获取 特征匹配跟踪 结果
+    // 特征Frame
     if(_img1.empty())
         featureFrame = featureTracker.trackImage(t, _img);
     else
@@ -176,10 +184,12 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     }
     
     if(MULTIPLE_THREAD)  
-    {     
+    {
+        //图片组数为偶数时.  inputImageCnt： 表示输入到 状态估计器estimator 的图片组数 （左右双目也是算一组图片）
         if(inputImageCnt % 2 == 0)
         {
             mBuf.lock();
+            //队列： featureBuf 存储时间戳 以及一对图片的特征Frame
             featureBuf.push(make_pair(t, featureFrame));
             mBuf.unlock();
         }
@@ -262,7 +272,12 @@ bool Estimator::IMUAvailable(double t)
     else
         return false;
 }
-
+/*
+ * 功能: 状态估计器处理进程
+        processIMU（）： 对IMU进行预积分
+        processIMage（）：对图像进行处理
+        pub VIO的各种话题，包括里程计信息，tf变换，相机姿态，点云信息，并且发布关键帧。
+ * */
 void Estimator::processMeasurements()
 {
     while (1)
@@ -270,11 +285,11 @@ void Estimator::processMeasurements()
         //printf("process measurments\n");
         pair<double, map<int, vector<pair<int, Eigen::Matrix<double, 7, 1> > > > > feature;
         vector<pair<double, Eigen::Vector3d>> accVector, gyrVector;
-        if(!featureBuf.empty())
+        if(!featureBuf.empty())  // 特征buff不为空,便一直处理
         {
             feature = featureBuf.front();
             curTime = feature.first + td;
-            while(1)
+            while(1)  //等待IMU数据
             {
                 if ((!USE_IMU  || IMUAvailable(feature.first + td)))
                     break;
@@ -289,6 +304,7 @@ void Estimator::processMeasurements()
             }
             mBuf.lock();
             if(USE_IMU)
+                // 将时间区间[t0,t1]之间的陀螺仪、加速度计输出的数据从 accBuf 和 gyrBuf 取出存放在accVector和gyrVector两个vector中
                 getIMUInterval(prevTime, curTime, accVector, gyrVector);
 
             featureBuf.pop();
@@ -296,7 +312,7 @@ void Estimator::processMeasurements()
 
             if(USE_IMU)
             {
-                if(!initFirstPoseFlag)
+                if(!initFirstPoseFlag)  // 初始化imu位姿
                     initFirstIMUPose(accVector);
                 for(size_t i = 0; i < accVector.size(); i++)
                 {
@@ -307,10 +323,16 @@ void Estimator::processMeasurements()
                         dt = curTime - accVector[i - 1].first;
                     else
                         dt = accVector[i].first - accVector[i - 1].first;
+                    //  对每一个IMU值进行预积分
                     processIMU(accVector[i].first, dt, accVector[i].second, gyrVector[i].second);
                 }
             }
             mProcess.lock();
+            // 图像特征处理：初始化以及非线性优化
+            // 1. (ceres_solver进行滑窗内（11帧）进行非线性优化的求解)
+            // 2. 双目pnp求解出滑窗内所有相机姿态，三角化特征点空间位置,再进行陀螺仪漂移的估计(结合前面的imu预积分)
+            // 3 . 解决边缘化残差,imu残差,相机重投影残差
+            // 输入： 特征图;特征图的头部
             processImage(feature.second, feature.first);
             prevTime = curTime;
 
@@ -320,12 +342,12 @@ void Estimator::processMeasurements()
             header.frame_id = "world";
             header.stamp = ros::Time(feature.first);
 
-            pubOdometry(*this, header);
-            pubKeyPoses(*this, header);
+            pubOdometry(*this, header);     // 里程计信息  并将世界坐标系数据写入到 vio.cvs文件
+            pubKeyPoses(*this, header);     // 关键点位置
             pubCameraPose(*this, header);
             pubPointCloud(*this, header);
             pubKeyframe(*this);
-            pubTF(*this, header);
+            pubTF(*this, header);           // tf变换
             mProcess.unlock();
         }
 
@@ -403,7 +425,13 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
     acc_0 = linear_acceleration;
     gyr_0 = angular_velocity; 
 }
-
+/*
+ * 功能: 处理图片
+        1. 根据特征点的视差（基于imu旋转补偿后特征点的视差）来判断是否是关键帧，并对应边缘化的flag
+        2. 用ceres_solver进行滑窗内（11帧）进行非线性优化的求解 （解决边缘化残差,imu残差,相机重投影残差）
+   输入： 特征图;特征图的头部
+   返回值: 空
+ * */
 void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, const double header)
 {
     ROS_DEBUG("new image coming ------------------------------------------");
@@ -447,7 +475,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         }
     }
 
-    if (solver_flag == INITIAL)
+    if (solver_flag == INITIAL) // 进行初始化
     {
         // monocular + IMU initilization
         if (!STEREO && USE_IMU)
@@ -526,7 +554,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         }
 
     }
-    else
+    else    // 初始化已经完成 , 进行非线性优化的求解
     {
         TicToc t_solve;
         if(!USE_IMU)

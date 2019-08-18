@@ -347,7 +347,7 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
     //first query; then add this frame into database!
     QueryResults ret;
     TicToc t_query;
-    db.query(keyframe->brief_descriptors, ret, 4, frame_index - 50);
+    db.query(keyframe->brief_descriptors, ret, 4, frame_index - 50); // frame_index - 50
     //printf("query time: %f", t_query.toc());
     //cout << "Searching for Image " << frame_index << ". " << ret << endl;
 
@@ -401,7 +401,7 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
         cv::waitKey(20);
     }
 */
-    if (find_loop && frame_index > 50)
+    if (find_loop  && frame_index > 50) // 回环检测 5 帧之后便开始
     {
         int min_index = -1;
         for (unsigned int i = 0; i < ret.size(); i++)
@@ -409,7 +409,14 @@ int PoseGraph::detectLoop(KeyFrame* keyframe, int frame_index)
             if (min_index == -1 || (ret[i].Id < min_index && ret[i].Score > 0.015))
                 min_index = ret[i].Id;
         }
-        return min_index;
+//        if (getKeyFrame(min_index)->sequence == 0 || frame_index > 50)
+//        {
+//            cout<< "finde min_index : "<< min_index << endl;
+//            return min_index;
+//        }
+      //  else
+       //  return  -1;
+        return  min_index;
     }
     else
         return -1;
@@ -938,7 +945,9 @@ void PoseGraph::savePoseGraph()
         keypoints_file = fopen(keypoints_path.c_str(), "w");
         for (int i = 0; i < (int)(*it)->keypoints.size(); i++)
         {
+            // 写 briefdes.dat
             brief_file << (*it)->brief_descriptors[i] << endl;
+            // 写 keypoints.txt
             fprintf(keypoints_file, "%f %f %f %f\n", (*it)->keypoints[i].pt.x, (*it)->keypoints[i].pt.y, 
                                                      (*it)->keypoints_norm[i].pt.x, (*it)->keypoints_norm[i].pt.y);
         }

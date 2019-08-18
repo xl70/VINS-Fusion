@@ -17,6 +17,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Bool.h>
 #include <cv_bridge/cv_bridge.h>
 #include <iostream>
@@ -79,6 +80,9 @@ ros::Publisher pub_exist_path; // 发布消息体的主题；已经存在并保�
 visualization_msgs::MarkerArray my_point_and_text; //  消息体；用于显示点与文字   在rviz显示
 ros::Publisher pub_point_and_text; // 发布消息体的主题；重定位显示等需要发布
 
+visualization_msgs::MarkerArray my_car_running; //  消息体；用于显示点与文字   在rviz显示
+ros::Publisher pub_car_running; // 发布消息体的主题；重定位显示等需要发布
+
 //模板函数：将string类型变量转换为常用的数值类型（此方法具有普遍适用性）
 template <class Type>
 Type stringToNum(const string& str)
@@ -92,7 +96,7 @@ Type stringToNum(const string& str)
 void pub_exist_graph()  // 发布已经存在的地图, 1.读取vio_loop文件  2.构造nav_msg  3.发布消息体
 {
 
-    ifstream inFile("/home/chewgum/slam/data_output/output/vio_loop.csv", ios::in);
+    ifstream inFile("/home/chewgum/slam/vio_loop.csv", ios::in);
     string lineStr;
     cout<< "read --------"<<endl;
 
@@ -100,7 +104,7 @@ void pub_exist_graph()  // 发布已经存在的地图, 1.读取vio_loop文件  
     current_time = ros::Time::now();
 
     my_exist_path.header.stamp=current_time;
-    my_exist_path.header.frame_id="map";
+    my_exist_path.header.frame_id="world";
 
     while (getline(inFile, lineStr))
     {
@@ -117,7 +121,7 @@ void pub_exist_graph()  // 发布已经存在的地图, 1.读取vio_loop文件  
         geometry_msgs::PoseStamped pose_stamped;
 
         pose_stamped.header.stamp = ros::Time(stringToNum<int>(lineArray[0]));// string 转为 double 再转为ros::Time
-        pose_stamped.header.frame_id = "map";
+        pose_stamped.header.frame_id = "world";
 
         pose_stamped.pose.position.x = stringToNum<float>(lineArray[1]) ;  // VISUALIZATION_SHIFT_X = 0
         pose_stamped.pose.position.y = stringToNum<float>(lineArray[2]) ;  // VISUALIZATION_SHIFT_Y = 0
@@ -142,7 +146,7 @@ void pub_point_and_text_maker(float x, float y,const char* text)  //
 {
     static  int k = 0;
     visualization_msgs::Marker marker;
-    marker.header.frame_id="map";  //必须是 world ,在同一个tf下
+    marker.header.frame_id="world";  //必须是 world ,在同一个tf下
     marker.header.stamp = ros::Time::now();
     //  marker.ns = "basic_shapes";
     marker.action = visualization_msgs::Marker::ADD;
@@ -150,14 +154,14 @@ void pub_point_and_text_maker(float x, float y,const char* text)  //
     marker.id =k;
     marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
 
-    marker.scale.z = 0.8;
+    marker.scale.z = 2;
     marker.color.b = 0;
     marker.color.g = 0;
     marker.color.r = 1;
     marker.color.a = 1;
 
     marker.pose.position.x = x ;
-    marker.pose.position.y = y + 2;
+    marker.pose.position.y = y + 0.5;
     marker.pose.position.z = 0.0;
     marker.pose.orientation.w = 1.0;
     marker.pose.orientation.x = 0.0;
@@ -181,9 +185,9 @@ void pub_point_and_text_maker(float x, float y,const char* text)  //
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-    marker.scale.x = 0.3;
-    marker.scale.y = 0.3;
-    marker.scale.z = 0.3;
+    marker.scale.x = 1;
+    marker.scale.y = 1;
+    marker.scale.z = 0;
     marker.color.a = 1.0; // Don't forget to set the alpha!
     marker.color.r = 0;
     marker.color.g = 1;
@@ -201,7 +205,7 @@ void pub_point_and_text_maker(float x, float y,float x2, float y2,const char* te
 {
     static  int k = 0;
     visualization_msgs::Marker marker;
-    marker.header.frame_id="map";  //必须是 world ,在同一个tf下
+    marker.header.frame_id="wrold";  //必须是 world ,在同一个tf下
     marker.header.stamp = ros::Time::now();
     //  marker.ns = "basic_shapes";
     marker.action = visualization_msgs::Marker::ADD;
@@ -282,7 +286,64 @@ void pub_point_and_text_maker(float x, float y,float x2, float y2,const char* te
     pub_point_and_text.publish(my_point_and_text);
 
 }
+void pub_car_running_maker(float x, float y)
+{
+    visualization_msgs::Marker marker;
+    marker.header.frame_id="world";  //必须是 world ,在同一个tf下
+    marker.header.stamp = ros::Time::now();
+    //  marker.ns = "basic_shapes";
+    marker.id =0;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = x;
+    marker.pose.position.y = y;
+    marker.pose.position.z = 1;
 
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 1;
+    marker.scale.y = 1;
+    marker.scale.z = 0.0;
+    marker.color.a = 1.0; // Don't forget to set the alpha!
+    marker.color.r = 255;
+    marker.color.g = 0;
+    marker.color.b = 0;
+
+    my_car_running.markers.push_back(marker);
+  //  cout<<"car pose ---- "<<endl;
+    pub_car_running.publish(my_car_running);
+
+
+//    visualization_msgs::Marker marker_txt;
+//    marker_txt.header.frame_id="world";  //必须是 world ,在同一个tf下
+//    marker_txt.header.stamp = ros::Time::now();
+//    //  marker.ns = "basic_shapes";
+//    marker_txt.action = visualization_msgs::Marker::ADD;
+//    marker_txt.id =1;
+//    marker_txt.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+//
+//    marker_txt.scale.z = 0.9;
+//    marker_txt.color.b = 0;
+//    marker_txt.color.g = 0;
+//    marker_txt.color.r = 1;
+//    marker_txt.color.a = 1;
+//
+//    marker_txt.pose.position.x = x + 2;
+//    marker_txt.pose.position.y = y + 3;
+//    marker_txt.pose.position.z = 0.0;
+//    marker_txt.pose.orientation.w = 1.0;
+//    marker_txt.pose.orientation.x = 0.0;
+//    marker_txt.pose.orientation.y = 0.0;
+//    marker_txt.pose.orientation.z = 0.0;
+//
+//    ostringstream str;
+//    str<< "Car";
+//    marker_txt.text=str.str();
+//
+//    my_car_running.markers.push_back(marker_txt);
+//    pub_car_running.publish(my_car_running);
+}
 
 void new_sequence()
 {
@@ -359,7 +420,7 @@ void point_callback(const sensor_msgs::PointCloudConstPtr &point_msg)
         p.z = tmp(2);
         point_cloud.points.push_back(p);
     }
-    pub_point_cloud.publish(point_cloud);
+    pub_point_cloud.publish(point_cloud); //发布3d点云
 }
 
 // only for visualization
@@ -431,11 +492,12 @@ void vio_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     Vector3d vio_t_cam;
     Quaterniond vio_q_cam;
     vio_t_cam = vio_t + vio_q * tic;
-    vio_q_cam = vio_q * qic;        
+    vio_q_cam = vio_q * qic;
 
-    cameraposevisual.reset();
-    cameraposevisual.add_pose(vio_t_cam, vio_q_cam);
-    cameraposevisual.publish_by(pub_camera_pose_visual, pose_msg->header);
+    pub_car_running_maker(vio_t.x(),vio_t.y());
+//    cameraposevisual.reset();
+//    cameraposevisual.add_pose(vio_t_cam, vio_q_cam);
+//    cameraposevisual.publish_by(pub_camera_pose_visual, pose_msg->header);
 
 
 }
@@ -501,7 +563,7 @@ void process()
             //printf(" point time %f \n", point_msg->header.stamp.toSec());
             //printf(" image time %f \n", image_msg->header.stamp.toSec());
             // skip fisrt few
-            if (skip_first_cnt < SKIP_FIRST_CNT)
+            if (skip_first_cnt < SKIP_FIRST_CNT) // 跳十帧
             {
                 skip_first_cnt++;
                 continue;
@@ -542,7 +604,7 @@ void process()
                                      pose_msg->pose.pose.orientation.x,
                                      pose_msg->pose.pose.orientation.y,
                                      pose_msg->pose.pose.orientation.z).toRotationMatrix();
-            if((T - last_t).norm() > SKIP_DIS)
+            if((T - last_t).norm() > SKIP_DIS) //只要有位置偏移 便开始构建关键帧
             {
                 vector<cv::Point3f> point_3d; 
                 vector<cv::Point2f> point_2d_uv; 
@@ -552,7 +614,7 @@ void process()
                 for (unsigned int i = 0; i < point_msg->points.size(); i++)
                 {
                     cv::Point3f p_3d;
-                    p_3d.x = point_msg->points[i].x;
+                    p_3d.x = point_msg->points[i].x;   // 3d 点云,在回调函数处已经发布
                     p_3d.y = point_msg->points[i].y;
                     p_3d.z = point_msg->points[i].z;
                     point_3d.push_back(p_3d);
@@ -609,6 +671,10 @@ void command()
         if (c == 'o')   // 发布起点
         {
             pub_point_and_text_maker(0.0,0.0,"origin(0,0)");
+        }
+        if (c == 'c')   // 发布car
+        {
+            pub_car_running_maker(5,5);
         }
 
         std::chrono::milliseconds dura(5);
@@ -707,6 +773,8 @@ int main(int argc, char **argv)
     // 发布的类型属于 nav_msgs::Odometry
     pub_exist_path = n.advertise<nav_msgs::Path>("exist_graph_path", 80000);  // 已经存在并保存好的地图  在初始化启动时候便发布
     pub_point_and_text = n.advertise<visualization_msgs::MarkerArray>("point_and_text_marker", 10);
+    pub_car_running = n.advertise<visualization_msgs::MarkerArray>("car_running_marker", 10);
+
 
     pub_match_img = n.advertise<sensor_msgs::Image>("match_image", 1000);
     pub_camera_pose_visual = n.advertise<visualization_msgs::MarkerArray>("camera_pose_visual", 1000);

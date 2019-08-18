@@ -55,7 +55,7 @@ Visualization Manager:
         Y: 0
         Z: 0
       Plane: XY
-      Plane Cell Count: 10
+      Plane Cell Count: 30
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/Axes
@@ -68,13 +68,14 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 100; 0; 0
+      Topic: /init/exist_graph_path
+      Color: 255; 255; 255
       Enabled: true
       Head Diameter: 0.300000012
       Head Length: 0.200000003
       Length: 800000
-      Line Style: Lines
-      Line Width: 0.0399999991
+      Line Style: Billboards
+      Line Width: 0.4
       Name: exitPath
       Offset:
         X: 0
@@ -85,13 +86,43 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /init/exist_graph_path
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Topic: /loop_fusion/exist_graph_path
+      Color: 255; 255; 255
+      Enabled: true
+      Head Diameter: 0.300000012
+      Head Length: 0.200000003
+      Length: 800000
+      Line Style: Billboards
+      Line Width: 0.4
+      Name: exitPath
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 155; 85; 255
+      Pose Style: None
+      Radius: 0.0299999993
+      Shaft Diameter: 0.100000001
+      Shaft Length: 0.100000001
       Unreliable: false
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /init/point_and_text_marker
       Name: point_text_maker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /loop_fusion/car_running_marker
+      Name: car_running_pose_maker
       Namespaces:
         "": true
       Queue Size: 100
@@ -122,8 +153,8 @@ Visualization Manager:
           Head Diameter: 0.300000012
           Head Length: 0.200000003
           Length: 0.300000012
-          Line Style: Lines
-          Line Width: 0.0399999991
+          Line Style: Billboards
+          Line Width: 0.4
           Name: loopPath
           Offset:
             X: 0
@@ -221,8 +252,8 @@ Visualization Manager:
           Head Diameter: 0.300000012
           Head Length: 0.200000003
           Length: 0.300000012
-          Line Style: Lines
-          Line Width: 0.0299999993
+          Line Style: Billboards
+          Line Width: 0.3
           Name: VIOPath
           Offset:
             X: 0

@@ -48,7 +48,7 @@ def dis(Vec2f_1, Vec2f_2):
 #     return PATH[goal_idx]
 def find_local_goal(Tx, Ty):
     global GOAL_IDX, MAP_PIXEL_UNIT
-    if dis(PATH[GOAL_IDX], (Tx, Ty)) * MAP_PIXEL_UNIT > THRESHOLD_DISTANCE + 3:
+    if dis(PATH[GOAL_IDX], (Tx, Ty)) * MAP_PIXEL_UNIT > THRESHOLD_DISTANCE + 0.5:
         min_dis = 999.99
         for i in range(len(PATH)):
             dis_ = dis(PATH[i], (Tx, Ty))
@@ -140,39 +140,24 @@ def callback(data):
 
     angle_output = '{:+.2f}'.format(angle).zfill(7)
 
-    if -5 < angle < 5:
-        velocity = 1
+    if -10 < angle < 10:
+        velocity = 2
     else:
         velocity = 1
     distance = dis((goal_x, goal_y), (pos_x, pos_y)) * MAP_PIXEL_UNIT
-    dis_init = dis((0 + ORIGIN_X, 0 + ORIGIN_Y), (pos_x, pos_y)) * MAP_PIXEL_UNIT
     print(goal_x, goal_y)
     print(pos_x, pos_y)
     print(distance)
-    print("dis_init :",dis_init)
     if distance <0.2:
-         velocity = 0
-         out = '1:stop\n2:{},{}\n'.format(angle_output, velocity)
-    # elif distance < 2:
-    #    # velocity = int(velocity * distance / 2)
-    #      velocity = 2
-    #      out = '1:start\n2:{},{}\n'.format(angle_output, velocity)
-    else:
-        if dis_init < 1.0:
-            velocity = 1
-            out = '1:start\n2:{},{}\n'.format(0, velocity)
-        else:
-            if -5<angle<5 and dis_init > 2.0:
-                velocity = 2
-                out = '1:start\n2:{},{}\n'.format(angle_output, velocity)
-            else:
-                out = '1:start\n2:{},{}\n'.format(angle_output, velocity)
-
-
+        velocity = 0
+        out = '1:stop\n2:{},{}\n'.format(angle_output, velocity)
+    elif distance < 2:
+       # velocity = int(velocity * distance / 2)
+         velocity = 1
    # velocity_output = '{}'.format(velocity).zfill(4)
    # velocity_output = 1	
 
-
+         out = '1:start\n2:{},{}\n'.format(angle_output, velocity)
     print(out)
     try:
         ser.write(out.encode())
@@ -185,7 +170,7 @@ if __name__ == '__main__':
     rospy.init_node('local_plan', anonymous=True)
     # rospy.Subscriber("/vins_estimator/odometry", Odometry, callback)
     # rospy.Subscriber("/loop_fusion/odometry_rect", Odometry, callback)
-    rospy.Subscriber("/loop_fusion/odometry_rect", Odometry, callback)
+    rospy.Subscriber("/init/odometry_map", Odometry, callback)
 
     while UI and not rospy.is_shutdown():
         cv2.imshow('map', map_grid_bgr.transpose((1, 0, 2))[::-1, ::-1])

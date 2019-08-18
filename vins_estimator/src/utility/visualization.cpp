@@ -42,7 +42,10 @@ void registerPub(ros::NodeHandle &n)
     pub_camera_pose = n.advertise<nav_msgs::Odometry>("camera_pose", 1000);
     pub_camera_pose_visual = n.advertise<visualization_msgs::MarkerArray>("camera_pose_visual", 1000);
     pub_keyframe_pose = n.advertise<nav_msgs::Odometry>("keyframe_pose", 1000);
+
+    // 帧的关键点发布 包括 3d点云,
     pub_keyframe_point = n.advertise<sensor_msgs::PointCloud>("keyframe_point", 1000);
+
     pub_extrinsic = n.advertise<nav_msgs::Odometry>("extrinsic", 1000);
     pub_image_track = n.advertise<sensor_msgs::Image>("image_track", 1000);
 
@@ -67,7 +70,9 @@ void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, co
     odometry.twist.twist.linear.z = V.z();
     pub_latest_odometry.publish(odometry);
 }
-
+/*
+ * 将cv图片格式转为ros图片消息包发布
+ * */
 void pubTrackImage(const cv::Mat &imgTrack, const double t)
 {
     std_msgs::Header header;
@@ -357,6 +362,8 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
 void pubKeyframe(const Estimator &estimator)
 {
     // pub camera pose, 2D-3D points of keyframe
+    //当一个旧帧被边缘化后，才被发送到pose-graph内
+    //pose_graph收到vio主题后，仅仅是为了显示用，真正构造Keyframe的是边缘化的帧的数据。
     if (estimator.solver_flag == Estimator::SolverFlag::NON_LINEAR && estimator.marginalization_flag == 0)
     {
         int i = WINDOW_SIZE - 2;
@@ -376,6 +383,7 @@ void pubKeyframe(const Estimator &estimator)
         odometry.pose.pose.orientation.w = R.w();
         //printf("time: %f t: %f %f %f r: %f %f %f %f\n", odometry.header.stamp.toSec(), P.x(), P.y(), P.z(), R.w(), R.x(), R.y(), R.z());
 
+        // 位姿发布
         pub_keyframe_pose.publish(odometry);
 
 
@@ -409,6 +417,7 @@ void pubKeyframe(const Estimator &estimator)
             }
 
         }
+        // 关键点发布
         pub_keyframe_point.publish(point_cloud);
     }
 }

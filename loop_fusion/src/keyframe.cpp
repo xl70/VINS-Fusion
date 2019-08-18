@@ -443,18 +443,18 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	            {
 	                cv::Point2f old_pt = matched_2d_old[i];
 	                old_pt.x += (COL + gap);
-	                cv::circle(loop_match_img, old_pt, 5, cv::Scalar(0, 255, 0));
+	                cv::circle(loop_match_img, old_pt, 5, cv::Scalar(0, 0, 255));
 	            }
-	            for (int i = 0; i< (int)matched_2d_cur.size(); i++)
-	            {
-	                cv::Point2f old_pt = matched_2d_old[i];
-	                old_pt.x += (COL + gap) ;
-	                cv::line(loop_match_img, matched_2d_cur[i], old_pt, cv::Scalar(0, 255, 0), 2, 8, 0);
-	            }
+//	            for (int i = 0; i< (int)matched_2d_cur.size(); i++)
+//	            {
+//	                cv::Point2f old_pt = matched_2d_old[i];
+//	                old_pt.x += (COL + gap) ;
+//	                cv::line(loop_match_img, matched_2d_cur[i], old_pt, cv::Scalar(0, 255, 0), 2, 8, 0);
+//	            }
 	            cv::Mat notation(50, COL + gap + COL, CV_8UC3, cv::Scalar(255, 255, 255));
-	            putText(notation, "current frame: " + to_string(index) + "  sequence: " + to_string(sequence), cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 3);
+	            putText(notation, "current: " + to_string(index) + "num= " +to_string((int)matched_2d_cur.size())+" sequence: " + to_string(sequence), cv::Point2f(20, 30), CV_FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 3);
 
-	            putText(notation, "previous frame: " + to_string(old_kf->index) + "  sequence: " + to_string(old_kf->sequence), cv::Point2f(20 + COL + gap, 30), CV_FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 3);
+	            putText(notation, "previous: " + to_string(old_kf->index) + "  sequence: " + to_string(old_kf->sequence), cv::Point2f(20 + COL + gap, 30), CV_FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255), 3);
 	            cv::vconcat(notation, loop_match_img, loop_match_img);
 
 	            /*
