@@ -21,3 +21,5 @@ source/pose_graph/*.dat
 my_test/pic/
 source/
 source_backup/
+.idea/
+pose_graph/
