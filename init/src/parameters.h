@@ -28,6 +28,6 @@ extern Eigen::Vector3d tic;
 extern Eigen::Matrix3d qic;
 //extern int VISUALIZATION_SHIFT_X;
 //extern int VISUALIZATION_SHIFT_Y;
-extern int ROW;
+extern int ROW;                             //来自init.cpp
 extern int COL;
-extern int DEBUG_IMAGE;
+extern int DEBUG_IMAGE;                     //来自init.cpp

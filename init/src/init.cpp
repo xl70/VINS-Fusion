@@ -29,8 +29,6 @@
 //#include "../ThirdParty/DBoW/TemplatedVocabulary.h"
 using namespace std;
 
-
-
 camodocal::CameraPtr m_camera;
 std::string BRIEF_PATTERN_FILE;
 std::string POSE_GRAPH_SAVE_PATH;
@@ -38,9 +36,7 @@ Eigen::Vector3d tic;
 Eigen::Matrix3d qic;
 int ROW = 480;
 int COL = 752;
-int DEBUG_IMAGE = false;
-
-
+int DEBUG_IMAGE = true;
 
 queue<sensor_msgs::ImageConstPtr> image_buf;
 queue<sensor_msgs::PointCloudConstPtr> point_buf;
@@ -134,14 +130,14 @@ void pub_point_and_text_maker(float x, float y,const char* text)  //
     marker.id =k;
     marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
 
-    marker.scale.z = 0.8;
+    marker.scale.z = 2;
     marker.color.b = 0;
     marker.color.g = 0;
     marker.color.r = 1;
     marker.color.a = 1;
 
     marker.pose.position.x = x ;
-    marker.pose.position.y = y + 2;
+    marker.pose.position.y = y + 0.5;
     marker.pose.position.z = 0.0;
     marker.pose.orientation.w = 1.0;
     marker.pose.orientation.x = 0.0;
@@ -165,9 +161,9 @@ void pub_point_and_text_maker(float x, float y,const char* text)  //
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-    marker.scale.x = 0.3;
-    marker.scale.y = 0.3;
-    marker.scale.z = 0.3;
+    marker.scale.x = 1;
+    marker.scale.y = 1;
+    marker.scale.z = 0;
     marker.color.a = 1.0; // Don't forget to set the alpha!
     marker.color.r = 0;
     marker.color.g = 1;
@@ -500,7 +496,7 @@ void loadPoseGraph()
             << keyframe->brief_descriptors.size() << endl;
         keyframelist.push_back(keyframe);
         db.add(keyframe->brief_descriptors);
-        global_index = index + 1;
+        // global_index = index + 1;  运行时候的图片序号从 0 开始
 
         //debug image
         if (DEBUG_IMAGE)
@@ -649,19 +645,19 @@ void process()
                 vector<cv::Point2f> point_2d_normal;
                 vector<double> point_id;
 
-                for (unsigned int i = 0; i < point_msg->points.size(); i++)
+                for (unsigned int i = 0; i < point_msg->points.size(); i++) // 关键帧 关键点
                 {
                     cv::Point3f p_3d;
-                    p_3d.x = point_msg->points[i].x;
+                    p_3d.x = point_msg->points[i].x;   // 世界坐标
                     p_3d.y = point_msg->points[i].y;
                     p_3d.z = point_msg->points[i].z;
                     point_3d.push_back(p_3d);
 
                     cv::Point2f p_2d_uv, p_2d_normal;
                     double p_id;
-                    p_2d_normal.x = point_msg->channels[i].values[0];
-                    p_2d_normal.y = point_msg->channels[i].values[1];
-                    p_2d_uv.x = point_msg->channels[i].values[2];
+                    p_2d_normal.x = point_msg->channels[i].values[0]; // 图片中x坐标
+                    p_2d_normal.y = point_msg->channels[i].values[1]; //      y坐标
+                    p_2d_uv.x = point_msg->channels[i].values[2];     // 相对应的相机归一化坐标
                     p_2d_uv.y = point_msg->channels[i].values[3];
                     p_id = point_msg->channels[i].values[4];
                     point_2d_normal.push_back(p_2d_normal);
@@ -673,7 +669,7 @@ void process()
                 
                 KeyFrame* cur_kf = new KeyFrame(pose_msg->header.stamp.toSec(), global_index, T, R, image, point_3d, point_2d_uv, point_2d_normal, point_id);
                 global_index++;
-
+                // 获取相似度评分再判断 ------------- 开始
                 DBoW2::QueryResults ret;
                 db.query(cur_kf->brief_descriptors, ret, 100, -1);
                 
@@ -720,11 +716,14 @@ void process()
                         old_kf = getKeyFrame(ret[index].Id);
                         old_kf->getVioPose(vio_P, vio_R);
                         index++;
-                        
+
+            // 获取相似度评分再判断 ------------- 结束
+            // 通过描述子匹配进行连接检测 ------------- 开始
                         Vector3d relative_t; 
                         Matrix3d relative_r;
                         m_process.lock();
-                        if (cur_kf->findConnection(old_kf, relative_t, relative_r))
+
+                        if (cur_kf->findConnection(old_kf, relative_t, relative_r)) // 计算当前帧与 old帧的相对 t 与 r
                         {
                             //cout << vio_R * relative_t + vio_P << endl;
                             //cout << vio_R * relative_r << endl;
@@ -733,7 +732,8 @@ void process()
                         }
                         m_process.unlock();
                     }
-                    
+            // 通过描述子匹配进行连接检测 ------------- 结束
+
                     if (p_r_RANSAC(i_p, i_r, init_p, init_r))
                     {
                         cout << "++++" << endl;
@@ -769,7 +769,8 @@ void command()
 
         if (c == 'o')   // 发布起点
         {
-            pub_point_and_text_maker(0.0,0.0,"origin(0,0)");
+           // pub_point_and_text_maker(0.0,0.0,"origin(0,0)");
+            pub_point_and_text_maker(0.0,0.0,"A");
         }
         std::chrono::milliseconds dura(5);
         std::this_thread::sleep_for(dura);
@@ -852,7 +853,7 @@ int main(int argc, char **argv)
     pub_odometry_map = n.advertise<nav_msgs::Odometry>("odometry_map", 1000);
     
     std::thread measurement_process{process};
-    std::thread measurement_process{command};
+    std::thread keyboard_command_process{command};
     ros::spin();
     return 0;
 }

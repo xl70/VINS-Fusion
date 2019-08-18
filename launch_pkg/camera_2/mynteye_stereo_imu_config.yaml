@@ -8,10 +8,10 @@ num_of_cam: 2
 imu_topic: "/mynteye/imu/data_raw"
 image0_topic: "/mynteye/left/image_raw"
 image1_topic: "/mynteye/right/image_raw"
-output_path: "/home/chewgum/slam/slam_ws/src/VINS-Fusion-master/source/"
+output_path: "/home/sxsqli/Desktop/camera_yaml/output/vio/"
 
-cam0_calib: "left_camera_1.yaml"
-cam1_calib: "right_camera_1.yaml"
+cam0_calib: "left.yaml"
+cam1_calib: "right.yaml"
 image_width: 752
 image_height: 480
    
@@ -24,22 +24,22 @@ body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 1.5108359131479343e-03, -9.9998319727311291e-01,
-       -5.5966549193246212e-03, -1.1927091685027707e-02,
-       9.9999853009792805e-01, 1.5153487743145844e-03,
-       -8.0219703029768465e-04, -4.1334147920170698e-02,
-       8.1066443537233497e-04, -5.5954347047071657e-03,
-       9.9998401683908855e-01, 2.7535891840009083e-02, 0., 0., 0., 1. ]
+   data: [ -5.3947049907534517e-03, -9.9996944520898079e-01,
+       -5.6573674537143239e-03, 3.0250206884350236e-03,
+       9.9997790521416940e-01, -5.3726035362033908e-03,
+       -3.9146155271022748e-03, -4.3964929944933680e-02,
+       3.8841011244554963e-03, -5.6783606513130056e-03,
+       9.9997633470936131e-01, 2.1208614077589838e-02, 0., 0., 0., 1. ]
 body_T_cam1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 4.0077297255624034e-03, -9.9996099543865846e-01,
-       -7.8705593050467787e-03, -1.2584155232017086e-02,
-       9.9993061158363605e-01, 3.9201724860482567e-03,
-       1.1108747258595890e-02, 8.2431475639820576e-02,
-       -1.1077460016744558e-02, -7.9145340360027398e-03,
-       9.9990732072056077e-01, 3.3798925902896758e-02, 0., 0., 0., 1. ]
+   data: [ -4.8444488517767059e-03, -9.9995648354420852e-01,
+       -7.9725989002173425e-03, 2.7510711948614771e-03,
+       9.9997272624159561e-01, -4.8886660735101284e-03,
+       5.5360380212509178e-03, 7.5624793677803989e-02,
+       -5.5747724862583005e-03, -7.9455624044456399e-03,
+       9.9995289386540775e-01, 2.0431692509523400e-02, 0., 0., 0., 1. ]
 
 #Multiple thread support
 multiple_thread: 1
@@ -53,22 +53,22 @@ show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 
 #optimization parameters
-max_solver_time: 0.04   # max solver itration time (ms), to guarantee real time
+max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time
 keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
 
 #imu parameters       The more accurate parameters you provide, the better performance
-acc_n: 1.0441832191472836e-02          # accelerometer measurement noise standard deviation. #0.2   0.04
-gyr_n: 9.1177719847525816e-04          # gyroscope measurement noise standard deviation.     #0.05  0.004
-acc_w: 1.9832480188998374e-04          # accelerometer bias random work noise standard deviation.  #0.02
-gyr_w: 2.2343802370769435e-05          # gyroscope bias random work noise standard deviation.     #4.0e-5
-g_norm: 9.8          # gravity magnitude
+acc_n: 1.1465001501459087e-02         # accelerometer measurement noise standard deviation. #0.2   0.04
+gyr_n: 8.7996082153095898e-04         # gyroscope measurement noise standard deviation.     #0.05  0.004
+acc_w: 4.0322510375809663e-04         # accelerometer bias random work noise standard deviation.  #0.02
+gyr_w: 2.2910996865395351e-05         # gyroscope bias random work noise standard deviation.     #4.0e-5
+g_norm: 9.8         # gravity magnitude
 
 #unsynchronization parameters
-estimate_td: 1                      # online estimate time offset between camera and imu
+estimate_td: 0                      # online estimate time offset between camera and imu
 td: 0.0                             # initial value of time offset. unit: s. readed image clock + td = real image clock (IMU clock)
 
 #loop closure parameters
 load_previous_pose_graph: 1        # load and reuse previous pose graph; load from 'pose_graph_save_path'
-pose_graph_save_path: "/home/chewgum/slam/slam_ws/src/VINS-Fusion-master/source/pose_graph/"  # save and load path
-save_image: 1                      # save image in pose graph for visualization prupose; you can close this function by setting 0
+pose_graph_save_path: "/home/sxsqli/Desktop/camera_yaml/output/pose_graph/" # save and load path
+save_image: 1                   # save image in pose graph for visualization prupose; you can close this function by setting 0 
